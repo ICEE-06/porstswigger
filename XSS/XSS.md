@@ -43,3 +43,49 @@ Voici les étapes pour le tester manuellement:
 	Si les payloads candidates n'ont pas marché, il faut tester d'autres payloads 
 - **Tester une attaque dans un navigateur**:
 	On utilise le navigateur lorsque une attaque sur Burp a marché.
+
+### Stored cross-site scripting
+
+surviennent lorsqu'une application reçoit des données d'une source non fiable et inclut ces données dans ses réponses HTTP ultérieures de manière non sécurisée. Les données en question peuvent être transmises à l'app via des requêtes HTTP.
+
+Supposons un site qui permet aux utilisateurs de commenter des publications (les commentaires seront vu par tout les autres utilisateurs). Les utilisateurs submit leurs commentaires dans une requêtes HTTP comme suit :
+
+```
+POST /post/comment HTTP/1.1 
+Host: vulnerable-website.com 
+Content-Length: 100 
+
+postId=3&comment=This+post+was+extremely+helpful.&name=Carlos+Montoya&email=carlos%40normal-user.net
+```
+
+Lorque le commentaire est envoyé, les autres users vont recevoir ceci dans l'app:
+
+```
+<p>This post was extremely helpful.</p>
+```
+
+L'application ne fait donc aucune vérification sur les données envoyées. Un attaquant peut donc envoyer ce genre de code malveillant dans les commentaires:
+
+```
+<p><script>/* Bad stuff here... */</script></p>
+```
+
+Ce script va s'exécuter dans le navigateur de chaque utilisateur.
+
+#### Comment trouver et tester?
+
+- tester tous les points d'entrée pertinents par lesquels des données contrôlables par un attaquant peuvent s'introduire dans le traitement de l'application.
+- tester les points de sortie où ces données pourraient apparaître dans les réponses de l'application
+
+Les **entry points** incluent:
+-  Paramètres ou autres données figurant dans la chaîne de requête URL et le corps du message.
+- Les headers des requêtes HTTP
+- Les file path
+
+Les points de sortie des attaques XSS stockées sont toutes les réponses HTTP possibles renvoyées à tout type d'utilisateur d'application, dans n'importe quelle situation.
+
+Pour tester cette vuln, il faut:
+- localiser les liens entre les points d'entrée et de sortie.
+- Pour identifier de manière exhaustive les liens entre les points d'entrée et de sortie, il faudrait tester chaque permutation séparément : soumettre une valeur spécifique au point d'entrée, accéder directement au point de sortie et vérifier si la valeur y figure. Cependant, cette approche n'est pas pratique pour une application comportant plus de quelques pages.
+- de données, en soumettant une valeur spécifique à chacun et en surveillant les réponses de l'application afin de détecter les cas où cette valeur apparaît.
+- Une fois les liens identifiés, on a plus qu'à tester les payloads appropriés.
